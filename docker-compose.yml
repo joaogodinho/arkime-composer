@@ -1,0 +1,21 @@
+version: '3'
+
+volumes:
+  moloch:
+
+services:
+  elasticsearch:
+    image: elasticsearch:latest
+  moloch-viewer:
+    build: ./moloch
+    environment:
+      - CAPTURE=off
+    depends_on:
+      - elasticsearch
+    ports:
+      - 8005:8005
+    volumes:
+      - ./pcap:/data/pcap
+      - ./logs:/data/moloch/logs
+      - moloch:/data/initialized
+      - moloch:/data/moloch/raw/
