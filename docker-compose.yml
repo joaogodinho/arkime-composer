@@ -5,8 +5,12 @@ services:
       - discovery.type=single-node
       - ES-JAVA_OPTS="-XX:UseSVE=0"
       - xpack.security.enabled=false
-    ports:
-      - '127.0.0.1:9200:9200'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
   capture:
     image: ghcr.io/arkime/arkime/arkime:v5-latest
     command: /opt/arkime/bin/docker.sh capture --update-geo -m -R /opt/arkime/raw -n node00
@@ -16,6 +20,11 @@ services:
       - ./arkime/etc/:/opt/arkime/etc/
       - ./raw:/opt/arkime/raw
     restart: always
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      viewer:
+        condition: service_healthy
   viewer:
     image: ghcr.io/arkime/arkime/arkime:v5-latest
     command: /opt/arkime/etc/start.sh
@@ -27,3 +36,12 @@ services:
     restart: always
     ports:
       - '127.0.0.1:8005:8005'
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /initialized"]
+      interval: 5s         # Check every 5 seconds
+      timeout: 3s          # Wait up to 3 seconds for the command to complete
+      retries: 10          # Try 10 times before marking as unhealthy
+      start_period: 5s
